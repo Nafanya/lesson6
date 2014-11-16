@@ -16,6 +16,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="ru.ifmo.md.lesson6.rssreader.RssProvider"
+            android:authorities="ru.ifmo.md.lesson6.rssreader"
+            android:enabled="true"
+            android:exported="true" >
+        </provider>
     </application>
 
 </manifest>
