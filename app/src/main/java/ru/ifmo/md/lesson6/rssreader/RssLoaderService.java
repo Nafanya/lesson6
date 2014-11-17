@@ -17,7 +17,7 @@ public class RssLoaderService extends IntentService {
     public static void startActionLoadOne(Context context, String url) {
         ContentValues values = new ContentValues();
         values.put(RssContract.Channels.CHANNEL_TITLE, "Loading");
-        values.put(RssContract.Channels.CHANNEL_LINK, "");
+        values.put(RssContract.Channels.CHANNEL_LINK, url);
         Uri uri = context.getContentResolver().insert(RssContract.Channels.CONTENT_URI, values);
         long id = Long.parseLong(uri.getLastPathSegment());
         context.getContentResolver().notifyChange(RssContract.Channels.CONTENT_URI, null);

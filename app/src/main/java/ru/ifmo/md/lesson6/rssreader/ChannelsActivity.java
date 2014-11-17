@@ -2,14 +2,16 @@ package ru.ifmo.md.lesson6.rssreader;
 
 import android.app.ListActivity;
 import android.app.LoaderManager;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Loader;
 import android.database.ContentObserver;
 import android.database.Cursor;
+import android.database.DataSetObserver;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.provider.BaseColumns;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -21,16 +23,21 @@ import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.CursorAdapter;
 import android.widget.EditText;
-import android.widget.SimpleCursorAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.net.MalformedURLException;
+import java.net.URL;
 
 
-public class ChannelsActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+public class ChannelsActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor>,ChannelsObserver.Callbacks {
 
     private static final int LOADER_CHANNELS = 1;
 
     private CursorAdapter mAdapter;
     private EditText mEditText;
+    private ChannelsObserver mObserver = null;
 
 
     @Override
@@ -43,9 +50,16 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int actionId, KeyEvent keyEvent) {
-                int actionAdd = getResources().getInteger(R.integer.actionAdd);
+                int actionAdd = getApplicationContext().getResources().getInteger(R.integer.actionAdd);
                 if (actionId == actionAdd) {
                     String potentialUrl = mEditText.getText().toString();
+                    try {
+                        new URL(potentialUrl);
+                    } catch (MalformedURLException e) {
+                        Toast.makeText(getApplicationContext(), "Bad url", Toast.LENGTH_SHORT).show();
+                        return true;
+                    }
+
                     addChannel(potentialUrl);
                     return true;
                 }
@@ -72,12 +86,41 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
         getLoaderManager().initLoader(LOADER_CHANNELS, null, this);
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mObserver == null) {
+            mObserver = new ChannelsObserver(this);
+        }
+        getContentResolver().registerContentObserver(
+                RssContract.Channels.CONTENT_URI, true, mObserver);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        getContentResolver().unregisterContentObserver(mObserver);
+        if (mObserver != null) {
+            mObserver = null;
+        }
+    }
+
     private void addChannel(String url) {
         RssLoaderService.startActionLoadOne(getApplicationContext(), url);
     }
 
     private void refreshAllChannels() {
         RssLoaderService.startActionLoadAll(getApplicationContext());
+    }
+
+    @Override
+    protected void onListItemClick(ListView lv, View v, int position, long id) {
+        //TODO: impelement RssActivity
+        Cursor cursor = (Cursor) mAdapter.getItem(position);
+        long channelId = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
+        //Intent intent = new Intent(this, RssActivity.class);
+        //intent.putExtra(EXTRA_RSS_ID, channelId);
+        //startActivity(intent);
     }
 
     @Override
@@ -96,7 +139,7 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
                 getContentResolver().delete(
                         RssContract.Channels.buildChannelUri(Long.toString(id)),
                         null, null);
-                getLoaderManager().getLoader(LOADER_CHANNELS).forceLoad();
+                //getLoaderManager().getLoader(LOADER_CHANNELS).forceLoad();
                 return true;
             default:
                 return super.onContextItemSelected(item);
@@ -140,4 +183,8 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
 
     }
 
+    @Override
+    public void onChannelsObserverFired() {
+        getLoaderManager().initLoader(LOADER_CHANNELS, null, this).forceLoad();
+    }
 }

@@ -82,16 +82,17 @@ public class RssProvider extends ContentProvider {
     public Uri insert(Uri uri, ContentValues values) {
         final int match = sUriMatcher.match(uri);
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        final long id;
 
         switch (match) {
             case CHANNELS:
-                db.insert(Tables.CHANNELS, null, values);
+                id = db.insert(Tables.CHANNELS, null, values);
                 notifyChange(uri);
-                return Channels.buildChannelUri(values.getAsString(Channels._ID));
+                return Channels.buildChannelUri(Long.toString(id));
             case POSTS:
-                db.insert(Tables.POSTS, null, values);
+                id = db.insert(Tables.POSTS, null, values);
                 notifyChange(uri);
-                return Posts.buildPostsUri(values.getAsString(Posts._ID));
+                return Posts.buildPostsUri(Long.toString(id));
             default:
                 throw new UnsupportedOperationException("Unknown Uri: " + uri);
         }
