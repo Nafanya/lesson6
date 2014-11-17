@@ -151,7 +151,6 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            setProgressBarIndeterminateVisibility(true);
             refreshAllChannels();
             return true;
         }

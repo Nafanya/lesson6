@@ -40,6 +40,11 @@ public class RssContract {
                 ChannelsColumns.CHANNEL_TITLE,
         };
 
+        public static final String[] UPDATE_COLUMNS = {
+                BaseColumns._ID,
+                ChannelsColumns.CHANNEL_LINK,
+        };
+
         public static Uri buildChannelUri(String channelId) {
             return CONTENT_URI.buildUpon().appendPath(channelId).build();
         }
