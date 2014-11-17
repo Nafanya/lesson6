@@ -48,12 +48,10 @@ public class RssProvider extends ContentProvider {
         final int rows;
         switch (match) {
             case CHANNELS_ID:
-                selection = selection + " AND " + Channels._ID + " = " + uri.getLastPathSegment();
-                rows = db.delete(Tables.CHANNELS, selection, selectionArgs);
+                rows = db.delete(Tables.CHANNELS, Channels._ID + " = " + uri.getLastPathSegment(), selectionArgs);
                 break;
             case POSTS_ID:
-                selection = selection + " AND " + Posts._ID + " = " + uri.getLastPathSegment();
-                rows = db.delete(Tables.POSTS, selection, selectionArgs);
+                rows = db.delete(Tables.POSTS, Posts._ID + " = " + uri.getLastPathSegment(), selectionArgs);
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown Uri: " + uri);

@@ -23,6 +23,11 @@
             android:enabled="true"
             android:exported="true" >
         </provider>
+
+        <service
+            android:name="ru.ifmo.md.lesson6.rssreader.RssLoaderService"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>

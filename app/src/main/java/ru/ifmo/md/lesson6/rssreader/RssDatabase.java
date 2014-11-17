@@ -1,10 +1,12 @@
 package ru.ifmo.md.lesson6.rssreader;
 
 import android.content.Context;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 
+import java.sql.DatabaseMetaData;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,6 +49,7 @@ public class RssDatabase extends SQLiteOpenHelper {
                 + BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + PostsColumns.POST_LINK + " TEXT NOT NULL,"
                 + PostsColumns.POST_TITLE + " TEXT NOT NULL,"
+                + PostsColumns.POST_CHANNEL + " INTEGER NOT NULL,"
                 + "FOREIGN KEY(" + PostsColumns.POST_CHANNEL + ") REFERENCES " +
                         Tables.CHANNELS + "(" + BaseColumns._ID + ") ON DELETE CASCADE);"
         );
@@ -54,7 +57,8 @@ public class RssDatabase extends SQLiteOpenHelper {
         for (Map.Entry<String, String> entry : predefinedChannels.entrySet()) {
             db.execSQL("INSERT INTO " + Tables.CHANNELS + "("
                     + Channels.CHANNEL_LINK + ", " + Channels.CHANNEL_TITLE + ") "
-                    + "VALUES (" + entry.getKey() + ", " + entry.getValue() + ");"
+                    + "VALUES (" + DatabaseUtils.sqlEscapeString(entry.getKey())
+                    + ", " + DatabaseUtils.sqlEscapeString(entry.getValue()) + ");"
             );
         }
     }
