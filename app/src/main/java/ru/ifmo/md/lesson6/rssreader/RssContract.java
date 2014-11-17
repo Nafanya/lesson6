@@ -65,8 +65,17 @@ public class RssContract {
                 PostsColumns.POST_TITLE
         };
 
+        public static final String[] URL_COLUMNS = {
+                BaseColumns._ID,
+                PostsColumns.POST_LINK
+        };
+
         public static Uri buildPostsUri(String channelId) {
             return CONTENT_URI.buildUpon().appendPath(channelId).build();
+        }
+
+        public static Uri buildPostUrlUri() {
+            return CONTENT_URI.buildUpon().appendPath("id").build();
         }
     }
 

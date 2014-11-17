@@ -43,8 +43,8 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
 
             @Override
             public void bindView(View view, Context context, Cursor cursor) {
-                ((TextView) view.findViewById(android.R.id.text1)).setText(cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_TITLE)));
-                ((TextView) view.findViewById(android.R.id.text2)).setText(cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK)));
+                ((TextView) view.findViewById(android.R.id.text1)).setText(cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_TITLE)));
+                ((TextView) view.findViewById(android.R.id.text2)).setText(cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_LINK)));
             }
         };
 

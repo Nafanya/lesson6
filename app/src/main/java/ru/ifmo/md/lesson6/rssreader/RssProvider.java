@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.util.Log;
 
 import ru.ifmo.md.lesson6.rssreader.RssContract.*;
 import ru.ifmo.md.lesson6.rssreader.RssDatabase.Tables;
@@ -21,7 +22,8 @@ public class RssProvider extends ContentProvider {
     private static final int CHANNELS_ID = 101;
 
     private static final int POSTS = 200;
-    private static final int POSTS_ID = 201;
+    private static final int POSTS_CHANNEL_ID = 201;
+    private static final int POSTS_POST_ID = 202;
 
     private static UriMatcher buildMatcher() {
         final UriMatcher matcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -31,7 +33,8 @@ public class RssProvider extends ContentProvider {
         matcher.addURI(authority, "channels/#", CHANNELS_ID);
 
         matcher.addURI(authority, "posts", POSTS);
-        matcher.addURI(authority, "posts/#", POSTS_ID);
+        matcher.addURI(authority, "posts/#", POSTS_CHANNEL_ID);
+        matcher.addURI(authority, "posts/id", POSTS_POST_ID);
 
         return matcher;
     }
@@ -50,7 +53,7 @@ public class RssProvider extends ContentProvider {
             case CHANNELS_ID:
                 rows = db.delete(Tables.CHANNELS, Channels._ID + " = " + uri.getLastPathSegment(), selectionArgs);
                 break;
-            case POSTS_ID:
+            case POSTS_CHANNEL_ID:
                 rows = db.delete(Tables.POSTS, Posts._ID + " = " + uri.getLastPathSegment(), selectionArgs);
                 break;
             default:
@@ -70,7 +73,7 @@ public class RssProvider extends ContentProvider {
                 return Channels.CONTENT_ITEM_TYPE;
             case POSTS:
                 return Posts.CONTENT_TYPE;
-            case POSTS_ID:
+            case POSTS_CHANNEL_ID:
                 return Posts.CONTENT_ITEM_TYPE;
 
             default:
@@ -123,9 +126,12 @@ public class RssProvider extends ContentProvider {
             case POSTS:
                 builder.setTables(Tables.POSTS);
                 break;
-            case POSTS_ID:
+            case POSTS_CHANNEL_ID:
                 builder.setTables(Tables.POSTS);
                 builder.appendWhere(Posts.POST_CHANNEL + " = " + uri.getLastPathSegment());
+                break;
+            case POSTS_POST_ID:
+                builder.setTables(Tables.POSTS);
                 break;
         }
         return builder.query(db, projection, selection, selectionArgs, null, null, sortOrder);
@@ -134,8 +140,24 @@ public class RssProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values, String selection,
                       String[] selectionArgs) {
-        // TODO: Implement this to handle requests to update one or more rows.
-        throw new UnsupportedOperationException("Not yet implemented");
+        final int match = sUriMatcher.match(uri);
+        final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        final int rows;
+
+        switch (match) {
+            case CHANNELS_ID:
+                rows = db.update(
+                        Tables.CHANNELS, values, Channels._ID + " = " + uri.getLastPathSegment(), selectionArgs);
+                notifyChange(uri);
+                return rows;
+            case POSTS_CHANNEL_ID:
+                rows = db.update(
+                        Tables.POSTS, values, Posts._ID + " = " + uri.getLastPathSegment(), selectionArgs);
+                notifyChange(uri);
+                return rows;
+            default:
+                throw new UnsupportedOperationException("Unknown Uri: " + uri);
+        }
     }
 
     private void notifyChange(Uri uri) {

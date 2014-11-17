@@ -5,6 +5,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.provider.BaseColumns;
 import android.sax.Element;
@@ -12,6 +13,7 @@ import android.sax.RootElement;
 import android.sax.ElementListener;
 import android.sax.EndTextElementListener;
 import android.sax.StartElementListener;
+import android.util.Log;
 import android.util.Xml;
 
 import org.xml.sax.Attributes;
@@ -105,6 +107,7 @@ public class RssLoaderService extends IntentService {
             final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
             final String id = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
             loadChannel(url, id);
+            cursor.moveToNext();
         }
     }
 
@@ -133,6 +136,12 @@ public class RssLoaderService extends IntentService {
             InputStreamReader isr = new InputStreamReader(is, encoding);
             RssChannel channel = RssParser.parse(isr);
 
+            //TODO: if channel == null delete channel
+            if (channel == null) {
+                getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
+                return;
+            }
+
             ContentValues values = new ContentValues();
             values.put(RssContract.ChannelsColumns.CHANNEL_TITLE, channel.getTitle());
             values.put(RssContract.ChannelsColumns.CHANNEL_LINK, channel.getUrl());
@@ -140,24 +149,32 @@ public class RssLoaderService extends IntentService {
             getContentResolver().update(
                     RssContract.Channels.buildChannelUri(channelId), values, null, null);
 
+            int newPosts = 0;
             for (RssPost post : channel.getPosts()) {
+                Cursor cursor = getContentResolver().query(
+                        RssContract.Posts.buildPostUrlUri(),
+                        RssContract.Posts.URL_COLUMNS,
+                        RssContract.Posts.POST_LINK + " = ?",
+                        new String[]{post.getUrl()},
+                        null
+                );
+                if (cursor.getCount() > 0) {
+                    cursor.close();
+                    continue;
+                }
+
                 values = new ContentValues();
                 values.put(RssContract.Posts.POST_LINK, post.getUrl());
                 values.put(RssContract.Posts.POST_TITLE, post.getTitle());
                 values.put(RssContract.Posts.POST_CHANNEL, channelId);
 
-
-                //TODO: insert if not exist post
-                //getContentResolver().insert(
-                //        RssContract.Posts.buildPostsUri()
-                //)
+                newPosts++;
+                Uri uri = getContentResolver().insert(RssContract.Posts.CONTENT_URI, values);
             }
-
-
+            Log.d("TAG", "Add " + newPosts + " posts to channel #" + channel.getTitle());
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private static class RssParser {
@@ -280,6 +297,8 @@ public class RssLoaderService extends IntentService {
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (SAXException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e) {
                 e.printStackTrace();
             }
             return null;
