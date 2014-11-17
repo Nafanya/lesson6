@@ -54,8 +54,14 @@ public class RssContract {
         public static final String CONTENT_TYPE = "vnd.android.cursor.dir/vnd.ifmorss.post";
         public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.ifmorss.post";
 
-        public static Uri buildPostsUri(String postId) {
-            return CONTENT_URI.buildUpon().appendPath(postId).build();
+        public static final String[] ALL_COLUMNS = {
+                BaseColumns._ID,
+                PostsColumns.POST_LINK,
+                PostsColumns.POST_TITLE
+        };
+
+        public static Uri buildPostsUri(String channelId) {
+            return CONTENT_URI.buildUpon().appendPath(channelId).build();
         }
     }
 

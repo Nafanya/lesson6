@@ -30,6 +30,11 @@
             android:name="ru.ifmo.md.lesson6.rssreader.RssLoaderService"
             android:exported="false" >
         </service>
+
+        <activity
+            android:name="ru.ifmo.md.lesson6.rssreader.ChannelActivity"
+            android:label="@string/title_activity_channel" >
+        </activity>
     </application>
 
 </manifest>

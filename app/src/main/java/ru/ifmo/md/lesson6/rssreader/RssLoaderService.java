@@ -14,7 +14,7 @@ public class RssLoaderService extends IntentService {
     private static final String EXTRA_CHANNEL_ID = "ru.ifmo.md.lesson6.rssreader.extra.CHANNEL_ID";
 
 
-    public static void startActionLoadOne(Context context, String url) {
+    public static void startActionAddChannel(Context context, String url) {
         ContentValues values = new ContentValues();
         values.put(RssContract.Channels.CHANNEL_TITLE, "Loading");
         values.put(RssContract.Channels.CHANNEL_LINK, url);
@@ -22,9 +22,13 @@ public class RssLoaderService extends IntentService {
         long id = Long.parseLong(uri.getLastPathSegment());
         context.getContentResolver().notifyChange(RssContract.Channels.CONTENT_URI, null);
 
+        startActionLoadOne(context, id);
+    }
+
+    public static void startActionLoadOne(Context context, long channelId) {
         Intent intent = new Intent(context, RssLoaderService.class);
         intent.setAction(ACTION_LOAD_ONE);
-        intent.putExtra(EXTRA_CHANNEL_ID, id);
+        intent.putExtra(EXTRA_CHANNEL_ID, channelId);
         context.startService(intent);
     }
 
