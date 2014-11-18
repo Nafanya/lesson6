@@ -39,6 +39,8 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_channel);
 
+        getActionBar().setDisplayHomeAsUpEnabled(true);
+
         Intent intent = getIntent();
         mChannelId = intent.getLongExtra(EXTRA_CHANNEL_ID, -1);
         if (mChannelId == -1) finish();
@@ -118,9 +120,13 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_refresh) {
-            refreshChannel();
-            return true;
+        switch (id) {
+            case R.id.action_refresh:
+                refreshChannel();
+                return true;
+            case android.R.id.home:
+                finish();
+                return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -159,7 +165,6 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
                 cursor.moveToFirst();
                 final String title = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_TITLE));
                 setTitle(title);
-                cursor.close();
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown loader: " + cursorLoader.getId());
@@ -188,6 +193,10 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
                 if (newPosts > 0) {
                     Toast.makeText(this, "You have " + newPosts + " new posts", Toast.LENGTH_SHORT).show();
                 }
+                break;
+            case Constants.RESULT_NO_INTERNET:
+                Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
+                break;
         }
     }
 

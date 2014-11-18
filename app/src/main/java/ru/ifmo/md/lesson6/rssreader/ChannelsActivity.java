@@ -222,22 +222,22 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
 
     @Override
     public void onReceiveResult(int resultCode, Bundle data) {
+        mSwipeRefreshLayout.setRefreshing(false);
         switch (resultCode) {
-            case Constants.RESULT_OK:
-                break;
             case Constants.RESULT_FAIL:
                 Toast.makeText(this, "Error while update, try again.", Toast.LENGTH_SHORT).show();
                 break;
             case Constants.RESULT_BAD_CHANNEL:
-                mSwipeRefreshLayout.setRefreshing(false);
                 Toast.makeText(this, "Invalid RSS url", Toast.LENGTH_SHORT).show();
                 break;
             case Constants.RESULT_LOAD_FINISHED:
-                mSwipeRefreshLayout.setRefreshing(false);
                 int newPosts = data.getInt(Constants.EXTRA_NEW_POSTS, 0);
                 if (newPosts > 0) {
                     Toast.makeText(this, "You have " + newPosts + " new posts", Toast.LENGTH_SHORT).show();
                 }
+                break;
+            case Constants.RESULT_NO_INTERNET:
+                Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown result: " + resultCode);

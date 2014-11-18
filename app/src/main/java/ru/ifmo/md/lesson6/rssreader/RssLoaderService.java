@@ -5,6 +5,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ResultReceiver;
@@ -26,6 +28,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +39,7 @@ public class RssLoaderService extends IntentService {
 
     private static final String EXTRA_CHANNEL_ID = "ru.ifmo.md.lesson6.rssreader.extra.CHANNEL_ID";
     private static final int ERROR = -1;
+    private static final int BAD_URL = -2;
 
     private ResultReceiver mReceiver;
 
@@ -73,6 +77,10 @@ public class RssLoaderService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         if (intent != null) {
             mReceiver = intent.getParcelableExtra(Constants.EXTRA_RECEIVER);
+            if (!isOnline()) {
+                mReceiver.send(Constants.RESULT_NO_INTERNET, Bundle.EMPTY);
+                return;
+            }
             final String action = intent.getAction();
             if (ACTION_LOAD_ONE.equals(action)) {
                 final long id = intent.getLongExtra(EXTRA_CHANNEL_ID, -1);
@@ -100,10 +108,16 @@ public class RssLoaderService extends IntentService {
         final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
         final String chId = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
         int newPosts = loadChannel(url, chId);
-        if (newPosts == ERROR) {
-            mReceiver.send(Constants.RESULT_FAIL, Bundle.EMPTY);
-        } else {
-            mReceiver.send(Constants.RESULT_OK, createResultBundle(newPosts));
+        switch (newPosts) {
+            case ERROR:
+                mReceiver.send(Constants.RESULT_FAIL, Bundle.EMPTY);
+                break;
+            case BAD_URL:
+                mReceiver.send(Constants.RESULT_BAD_CHANNEL, Bundle.EMPTY);
+                break;
+            default:
+                mReceiver.send(Constants.RESULT_OK, createResultBundle(newPosts));
+                break;
         }
     }
 
@@ -121,7 +135,7 @@ public class RssLoaderService extends IntentService {
             final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
             final String id = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
             int result = loadChannel(url, id);
-            if (result != ERROR) {
+            if (result > 0) {
                 newPosts += result;
             }
             cursor.moveToNext();
@@ -140,7 +154,7 @@ public class RssLoaderService extends IntentService {
         } catch (MalformedURLException e) {
             getContentResolver().delete(
                     RssContract.Channels.buildChannelUri(channelId), null, null);
-            return ERROR;
+            return BAD_URL;
         }
 
         try {
@@ -160,7 +174,7 @@ public class RssLoaderService extends IntentService {
 
             if (channel == null) {
                 getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
-                return ERROR;
+                return BAD_URL;
             }
 
             ContentValues values = new ContentValues();
@@ -192,10 +206,22 @@ public class RssLoaderService extends IntentService {
                 Uri uri = getContentResolver().insert(RssContract.Posts.CONTENT_URI, values);
             }
             Log.d("TAG", "Add " + newPosts + " posts to channel #" + channel.getTitle());
+        } catch (UnknownHostException e) {
+            if (isOnline()) {
+                getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
+            }
+            return BAD_URL;
         } catch (IOException e) {
             e.printStackTrace();
         }
         return newPosts;
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 
     private Bundle createResultBundle(int posts) {
