@@ -91,6 +91,7 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
         }
         getContentResolver().registerContentObserver(
                 RssContract.Channels.CONTENT_URI, true, mObserver);
+        getLoaderManager().initLoader(LOADER_CHANNELS, null, this).forceLoad();
     }
 
     @Override
@@ -114,6 +115,7 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
     protected void onListItemClick(ListView lv, View v, int position, long id) {
         Cursor cursor = (Cursor) mAdapter.getItem(position);
         long channelId = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
+        cursor.close();
         Intent intent = new Intent(this, ChannelActivity.class);
         intent.putExtra(ChannelActivity.EXTRA_CHANNEL_ID, channelId);
         startActivity(intent);
