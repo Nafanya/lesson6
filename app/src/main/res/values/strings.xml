@@ -9,5 +9,7 @@
     <string name="action_refresh">Refresh</string>
     <string name="action_refresh_all">Refresh all</string>
     <string name="title_activity_channel">ChannelActivity</string>
+    <string name="title_activity_web_view">WebViewActivity</string>
+    <string name="hello_world">Hello world!</string>
 
 </resources>

@@ -3,6 +3,7 @@
     package="ru.ifmo.md.lesson6.rssreader" >
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
@@ -34,10 +35,14 @@
         <activity
             android:name="ru.ifmo.md.lesson6.rssreader.ChannelActivity"
             android:label="@null"
-            android:parentActivityName=".ChannelsActivity">
+            android:parentActivityName="ru.ifmo.md.lesson6.rssreader.ChannelsActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="ru.ifmo.md.lesson6.rssreader.ChannelsActivity" />
+        </activity>
+        <activity
+            android:name="ru.ifmo.md.lesson6.rssreader.WebViewActivity"
+            android:label="@string/title_activity_web_view" >
         </activity>
     </application>
 

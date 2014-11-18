@@ -9,6 +9,7 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.BaseColumns;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -38,6 +39,12 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_channel);
+
+        try {
+            getActionBar().setDisplayHomeAsUpEnabled(true);
+        } catch (NullPointerException e) {
+            //ignore
+        }
 
         Intent intent = getIntent();
         mChannelId = intent.getLongExtra(EXTRA_CHANNEL_ID, -1);
@@ -110,6 +117,15 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     }
 
     @Override
+    protected void onListItemClick(ListView lv, View v, int position, long id) {
+        Cursor cursor = (Cursor) mAdapter.getItem(position);
+        String url = cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_LINK));
+        Intent intent = new Intent(this, WebViewActivity.class);
+        intent.putExtra(WebViewActivity.EXTRA_URL, url);
+        startActivity(intent);
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_channel, menu);
         return true;
@@ -118,14 +134,19 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_refresh) {
-            refreshChannel();
-            return true;
+        switch (id) {
+            case R.id.action_refresh:
+                refreshChannel();
+                return true;
+            case android.R.id.home:
+                finish();
+                return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
     private void refreshChannel() {
+        mSwipeRefreshLayout.setRefreshing(true);
         RssLoaderService.startActionLoadOne(this, mChannelId, mReceiver);
     }
 
@@ -159,7 +180,6 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
                 cursor.moveToFirst();
                 final String title = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_TITLE));
                 setTitle(title);
-                cursor.close();
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown loader: " + cursorLoader.getId());
@@ -188,6 +208,10 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
                 if (newPosts > 0) {
                     Toast.makeText(this, "You have " + newPosts + " new posts", Toast.LENGTH_SHORT).show();
                 }
+                break;
+            case Constants.RESULT_NO_INTERNET:
+                Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
+                break;
         }
     }
 
