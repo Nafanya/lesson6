@@ -8,16 +8,21 @@ import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.CursorAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
-public class ChannelActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor>,RssObserver.Callbacks {
+public class ChannelActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor>,RssObserver.Callbacks, RssResultReceiver.Receiver, SwipeRefreshLayout.OnRefreshListener {
     public static final String EXTRA_CHANNEL_ID = "ru.ifmo.md.lesson6.rssreader.extra.CHANNEL_ID";
 
     private static final int LOADER_POSTS = 1;
@@ -26,6 +31,8 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     private CursorAdapter mAdapter;
     private long mChannelId;
     private RssObserver mObserver;
+    private RssResultReceiver mReceiver;
+    private SwipeRefreshLayout mSwipeRefreshLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +42,29 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
         Intent intent = getIntent();
         mChannelId = intent.getLongExtra(EXTRA_CHANNEL_ID, -1);
         if (mChannelId == -1) finish();
+
+        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeLayout);
+        mSwipeRefreshLayout.setOnRefreshListener(this);
+
+        final ListView listView = getListView();
+
+        getListView().setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView absListView, int scrollState) {
+                final int topRowVerticalPosition;
+                if (listView == null || listView.getChildCount() == 0) {
+                    topRowVerticalPosition = 0;
+                } else {
+                    topRowVerticalPosition = listView.getChildAt(0).getTop();
+                }
+                mSwipeRefreshLayout.setEnabled(topRowVerticalPosition >= 0);
+            }
+
+            @Override
+            public void onScroll(AbsListView absListView, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+
+            }
+        });
 
         mAdapter = new CursorAdapter(this, null, true) {
             @Override
@@ -59,16 +89,20 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     @Override
     public void onResume() {
         super.onResume();
+        mReceiver = new RssResultReceiver(new Handler());
+        mReceiver.setReceiver(this);
         if (mObserver == null) {
             mObserver = new RssObserver(this);
         }
         getContentResolver().registerContentObserver(
                 RssContract.Posts.CONTENT_URI, true, mObserver);
+        getLoaderManager().initLoader(LOADER_POSTS, null, this).forceLoad();
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        mReceiver.setReceiver(null);
         getContentResolver().unregisterContentObserver(mObserver);
         if (mObserver != null) {
             mObserver = null;
@@ -85,10 +119,14 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            RssLoaderService.startActionLoadOne(this, mChannelId);
+            refreshChannel();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void refreshChannel() {
+        RssLoaderService.startActionLoadOne(this, mChannelId, mReceiver);
     }
 
     @Override
@@ -136,5 +174,25 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     @Override
     public void onChannelsObserverFired() {
         getLoaderManager().initLoader(LOADER_POSTS, null, this).forceLoad();
+    }
+
+    @Override
+    public void onReceiveResult(int resultCode, Bundle data) {
+        mSwipeRefreshLayout.setRefreshing(false);
+        switch (resultCode) {
+            case Constants.RESULT_FAIL:
+                Toast.makeText(this, "Error while update, try again.", Toast.LENGTH_SHORT).show();
+                break;
+            case Constants.RESULT_OK:
+                int newPosts = data.getInt(Constants.EXTRA_NEW_POSTS, 0);
+                if (newPosts > 0) {
+                    Toast.makeText(this, "You have " + newPosts + " new posts", Toast.LENGTH_SHORT).show();
+                }
+        }
+    }
+
+    @Override
+    public void onRefresh() {
+        refreshChannel();
     }
 }

@@ -8,7 +8,9 @@ import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.BaseColumns;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -17,6 +19,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.CursorAdapter;
 import android.widget.EditText;
@@ -28,20 +31,44 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 
-public class ChannelsActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor>,RssObserver.Callbacks {
+public class ChannelsActivity extends ListActivity implements LoaderManager.LoaderCallbacks<Cursor>,RssObserver.Callbacks, SwipeRefreshLayout.OnRefreshListener, RssResultReceiver.Receiver {
 
     private static final int LOADER_CHANNELS = 1;
 
     private CursorAdapter mAdapter;
     private EditText mEditText;
     private RssObserver mObserver = null;
-
+    private RssResultReceiver mReceiver;
+    private SwipeRefreshLayout mSwipeRefreshLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.activity_channels);
+
+        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeLayout);
+        mSwipeRefreshLayout.setOnRefreshListener(this);
+
+        final ListView listView = getListView();
+
+        getListView().setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView absListView, int scrollState) {
+                final int topRowVerticalPosition;
+                if (listView == null || listView.getChildCount() == 0) {
+                    topRowVerticalPosition = 0;
+                } else {
+                    topRowVerticalPosition = listView.getChildAt(0).getTop();
+                }
+                mSwipeRefreshLayout.setEnabled(topRowVerticalPosition >= 0);
+            }
+
+            @Override
+            public void onScroll(AbsListView absListView, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+
+            }
+        });
 
         mEditText = (EditText) findViewById(R.id.editText);
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
@@ -86,6 +113,8 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
     @Override
     public void onResume() {
         super.onResume();
+        mReceiver = new RssResultReceiver(new Handler());
+        mReceiver.setReceiver(this);
         if (mObserver == null) {
             mObserver = new RssObserver(this);
         }
@@ -97,6 +126,7 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
     @Override
     public void onPause() {
         super.onPause();
+        mReceiver.setReceiver(null);
         getContentResolver().unregisterContentObserver(mObserver);
         if (mObserver != null) {
             mObserver = null;
@@ -104,11 +134,12 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
     }
 
     private void addChannel(String url) {
-        RssLoaderService.startActionAddChannel(getApplicationContext(), url);
+        RssLoaderService.startActionAddChannel(getApplicationContext(), url, mReceiver);
     }
 
     private void refreshAllChannels() {
-        RssLoaderService.startActionLoadAll(getApplicationContext());
+        RssLoaderService.startActionLoadAll(getApplicationContext(), mReceiver);
+        mSwipeRefreshLayout.setRefreshing(true);
     }
 
     @Override
@@ -182,5 +213,34 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
     @Override
     public void onChannelsObserverFired() {
         getLoaderManager().initLoader(LOADER_CHANNELS, null, this).forceLoad();
+    }
+
+    @Override
+    public void onRefresh() {
+        refreshAllChannels();
+    }
+
+    @Override
+    public void onReceiveResult(int resultCode, Bundle data) {
+        switch (resultCode) {
+            case Constants.RESULT_OK:
+                break;
+            case Constants.RESULT_FAIL:
+                Toast.makeText(this, "Error while update, try again.", Toast.LENGTH_SHORT).show();
+                break;
+            case Constants.RESULT_BAD_CHANNEL:
+                mSwipeRefreshLayout.setRefreshing(false);
+                Toast.makeText(this, "Invalid RSS url", Toast.LENGTH_SHORT).show();
+                break;
+            case Constants.RESULT_LOAD_FINISHED:
+                mSwipeRefreshLayout.setRefreshing(false);
+                int newPosts = data.getInt(Constants.EXTRA_NEW_POSTS, 0);
+                if (newPosts > 0) {
+                    Toast.makeText(this, "You have " + newPosts + " new posts", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            default:
+                throw new UnsupportedOperationException("Unknown result: " + resultCode);
+        }
     }
 }

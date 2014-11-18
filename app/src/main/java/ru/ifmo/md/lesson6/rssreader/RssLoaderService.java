@@ -5,8 +5,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.net.Uri;
+import android.os.Bundle;
+import android.os.ResultReceiver;
 import android.provider.BaseColumns;
 import android.sax.Element;
 import android.sax.RootElement;
@@ -34,8 +35,11 @@ public class RssLoaderService extends IntentService {
     private static final String ACTION_LOAD_ALL = "ru.ifmo.md.lesson6.rssreader.action.LOAD_ALL";
 
     private static final String EXTRA_CHANNEL_ID = "ru.ifmo.md.lesson6.rssreader.extra.CHANNEL_ID";
+    private static final int ERROR = -1;
 
-    public static void startActionAddChannel(Context context, String url) {
+    private ResultReceiver mReceiver;
+
+    public static void startActionAddChannel(Context context, String url, RssResultReceiver receiver) {
         ContentValues values = new ContentValues();
         values.put(RssContract.Channels.CHANNEL_TITLE, "Loading");
         values.put(RssContract.Channels.CHANNEL_LINK, url);
@@ -43,19 +47,21 @@ public class RssLoaderService extends IntentService {
         long id = Long.parseLong(uri.getLastPathSegment());
         context.getContentResolver().notifyChange(RssContract.Channels.CONTENT_URI, null);
 
-        startActionLoadOne(context, id);
+        startActionLoadOne(context, id, receiver);
     }
 
-    public static void startActionLoadOne(Context context, long channelId) {
+    public static void startActionLoadOne(Context context, long channelId, RssResultReceiver receiver) {
         Intent intent = new Intent(context, RssLoaderService.class);
         intent.setAction(ACTION_LOAD_ONE);
         intent.putExtra(EXTRA_CHANNEL_ID, channelId);
+        intent.putExtra(Constants.EXTRA_RECEIVER, receiver);
         context.startService(intent);
     }
 
-    public static void startActionLoadAll(Context context) {
+    public static void startActionLoadAll(Context context, RssResultReceiver receiver) {
         Intent intent = new Intent(context, RssLoaderService.class);
         intent.setAction(ACTION_LOAD_ALL);
+        intent.putExtra(Constants.EXTRA_RECEIVER, receiver);
         context.startService(intent);
     }
 
@@ -66,6 +72,7 @@ public class RssLoaderService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent != null) {
+            mReceiver = intent.getParcelableExtra(Constants.EXTRA_RECEIVER);
             final String action = intent.getAction();
             if (ACTION_LOAD_ONE.equals(action)) {
                 final long id = intent.getLongExtra(EXTRA_CHANNEL_ID, -1);
@@ -92,7 +99,12 @@ public class RssLoaderService extends IntentService {
         }
         final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
         final String chId = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
-        loadChannel(url, chId);
+        int newPosts = loadChannel(url, chId);
+        if (newPosts == ERROR) {
+            mReceiver.send(Constants.RESULT_FAIL, Bundle.EMPTY);
+        } else {
+            mReceiver.send(Constants.RESULT_OK, createResultBundle(newPosts));
+        }
     }
 
     private void handleActionLoadAll() {
@@ -101,23 +113,34 @@ public class RssLoaderService extends IntentService {
                 RssContract.Channels.UPDATE_COLUMNS,
                 null, null, null
         );
+
+        int newPosts = 0;
+
         cursor.moveToFirst();
         while (!cursor.isAfterLast()) {
             final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
             final String id = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
-            loadChannel(url, id);
+            int result = loadChannel(url, id);
+            if (result != ERROR) {
+                newPosts += result;
+            }
             cursor.moveToNext();
         }
+
+        mReceiver.send(Constants.RESULT_LOAD_FINISHED, createResultBundle(newPosts));
     }
 
-    private void loadChannel(final String surl, String channelId) {
+    //TODO:  mReceiver.send(Constants.RESULT_BAD_CHANNEL, Bundle.EMPTY);
+
+    private int loadChannel(final String tUrl, String channelId) {
         URL url;
+        int newPosts = 0;
         try {
-            url = new URL(surl);
+            url = new URL(tUrl);
         } catch (MalformedURLException e) {
             getContentResolver().delete(
                     RssContract.Channels.buildChannelUri(channelId), null, null);
-            return;
+            return ERROR;
         }
 
         try {
@@ -137,7 +160,7 @@ public class RssLoaderService extends IntentService {
 
             if (channel == null) {
                 getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
-                return;
+                return ERROR;
             }
 
             ContentValues values = new ContentValues();
@@ -147,7 +170,6 @@ public class RssLoaderService extends IntentService {
             getContentResolver().update(
                     RssContract.Channels.buildChannelUri(channelId), values, null, null);
 
-            int newPosts = 0;
             for (RssPost post : channel.getPosts()) {
                 Cursor cursor = getContentResolver().query(
                         RssContract.Posts.buildPostUrlUri(),
@@ -173,6 +195,13 @@ public class RssLoaderService extends IntentService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return newPosts;
+    }
+
+    private Bundle createResultBundle(int posts) {
+        Bundle bundle = new Bundle();
+        bundle.putInt(Constants.EXTRA_NEW_POSTS, posts);
+        return bundle;
     }
 
     private static class RssParser {
