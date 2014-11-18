@@ -35,7 +35,6 @@ public class RssLoaderService extends IntentService {
 
     private static final String EXTRA_CHANNEL_ID = "ru.ifmo.md.lesson6.rssreader.extra.CHANNEL_ID";
 
-
     public static void startActionAddChannel(Context context, String url) {
         ContentValues values = new ContentValues();
         values.put(RssContract.Channels.CHANNEL_TITLE, "Loading");
@@ -83,7 +82,7 @@ public class RssLoaderService extends IntentService {
         Cursor cursor = getContentResolver().query(
                 RssContract.Channels.buildChannelUri(channelId),
                 RssContract.Channels.UPDATE_COLUMNS,
-                RssContract.ChannelsColumns.CHANNEL_LINK + " = ?",
+                BaseColumns._ID + " = ?",
                 new String[]{channelId},
                 null
         );
@@ -126,7 +125,7 @@ public class RssLoaderService extends IntentService {
             connection.connect();
             InputStream is = connection.getInputStream();
             String encoding = "utf-8";
-            final String contentType = connection.getContentType();
+            final String contentType = connection.getHeaderField("Content-type");
             if (contentType != null && contentType.contains("charset=")) {
                 Matcher m = Pattern.compile("charset=([^\\s]+)").matcher(contentType);
                 if (m.find()) {
@@ -136,7 +135,6 @@ public class RssLoaderService extends IntentService {
             InputStreamReader isr = new InputStreamReader(is, encoding);
             RssChannel channel = RssParser.parse(isr);
 
-            //TODO: if channel == null delete channel
             if (channel == null) {
                 getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
                 return;
@@ -178,9 +176,11 @@ public class RssLoaderService extends IntentService {
     }
 
     private static class RssParser {
+        private static final String ATOM_NAMESPACE = "http://www.w3.org/2005/Atom";
+
         private static final RootElement root = new RootElement("rss");
         private static final Element channel = root.getChild("channel");
-        private static final Element channelUrl = channel.getChild("link");
+        private static final Element channelUrl = channel.getChild(ATOM_NAMESPACE, "link");
         private static final Element channelTitle = channel.getChild("title");
         private static final Element channelDescription = channel.getChild("description");
 
@@ -202,24 +202,45 @@ public class RssLoaderService extends IntentService {
                 }
             });
 
+            channelUrl.setElementListener(new ElementListener() {
+                @Override
+                public void end() {
+
+                }
+
+                @Override
+                public void start(Attributes attributes) {
+                    String url = attributes.getValue("href");
+                    String[] parts = url.split("\\s+");
+                    if (parts.length > 0) {
+                        url = parts[0];
+                    }
+                    Log.d("TAG", url);
+
+                    if (url != null) {
+                        curChannel.setUrl(url.trim());
+                    }
+                }
+            });
+
             channelUrl.setEndTextElementListener(new EndTextElementListener() {
                 @Override
                 public void end(String s) {
-                    curChannel.setUrl(s);
+                    //curChannel.setUrl(s.trim());
                 }
             });
 
             channelTitle.setEndTextElementListener(new EndTextElementListener() {
                 @Override
                 public void end(String s) {
-                    curChannel.setTitle(s);
+                    curChannel.setTitle(s.trim());
                 }
             });
 
             channelDescription.setEndTextElementListener(new EndTextElementListener() {
                 @Override
                 public void end(String s) {
-                    curChannel.setDescription(s);
+                    curChannel.setDescription(s.trim());
                 }
             });
 
@@ -245,14 +266,14 @@ public class RssLoaderService extends IntentService {
             postUrl.setEndTextElementListener(new EndTextElementListener() {
                 @Override
                 public void end(String s) {
-                    curPost.setUrl(s);
+                    curPost.setUrl(s.trim());
                 }
             });
 
             postTitle.setEndTextElementListener(new EndTextElementListener() {
                 @Override
                 public void end(String s) {
-                    curPost.setTitle(s);
+                    curPost.setTitle(s.trim());
                 }
             });
 
@@ -266,14 +287,14 @@ public class RssLoaderService extends IntentService {
             postDescription.setEndTextElementListener(new EndTextElementListener() {
                 @Override
                 public void end(String s) {
-                    curPost.setDescription(s);
+                    curPost.setDescription(s.trim());
                 }
             });
 
             postGuid.setEndTextElementListener(new EndTextElementListener() {
                 @Override
                 public void end(String s) {
-                    curPost.setGuid(s);
+                    curPost.setGuid(s.trim());
                 }
             });
 

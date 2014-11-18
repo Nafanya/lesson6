@@ -21,6 +21,7 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     public static final String EXTRA_CHANNEL_ID = "ru.ifmo.md.lesson6.rssreader.extra.CHANNEL_ID";
 
     private static final int LOADER_POSTS = 1;
+    private static final int LOADER_CHANNEL_INFO = 2;
 
     private CursorAdapter mAdapter;
     private long mChannelId;
@@ -52,6 +53,7 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
         registerForContextMenu(findViewById(android.R.id.list));
 
         getLoaderManager().initLoader(LOADER_POSTS, null, this);
+        getLoaderManager().initLoader(LOADER_CHANNEL_INFO, null, this);
     }
 
     @Override
@@ -61,7 +63,7 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
             mObserver = new RssObserver(this);
         }
         getContentResolver().registerContentObserver(
-                RssContract.Channels.CONTENT_URI, true, mObserver);
+                RssContract.Posts.CONTENT_URI, true, mObserver);
     }
 
     @Override
@@ -91,19 +93,39 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle bundle) {
-        return new CursorLoader(
-                this,
-                RssContract.Posts.buildPostsUri(Long.toString(mChannelId)),
-                RssContract.Posts.ALL_COLUMNS,
-                null,
-                null,
-                null
-        );
+        switch (id) {
+            case LOADER_POSTS:
+                return new CursorLoader(
+                        this,
+                        RssContract.Posts.buildPostsUri(Long.toString(mChannelId)),
+                        RssContract.Posts.ALL_COLUMNS,
+                        null, null, null);
+            case LOADER_CHANNEL_INFO:
+                return new CursorLoader(
+                        this,
+                        RssContract.Channels.buildChannelUri(Long.toString(mChannelId)),
+                        RssContract.Channels.ALL_COLUMNS,
+                        null, null, null);
+            default:
+                throw new UnsupportedOperationException("Unknown loader: " + id);
+        }
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        mAdapter.swapCursor(cursor);
+        switch (cursorLoader.getId()) {
+            case LOADER_POSTS:
+                mAdapter.swapCursor(cursor);
+                break;
+            case LOADER_CHANNEL_INFO:
+                cursor.moveToFirst();
+                final String title = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_TITLE));
+                setTitle(title);
+                cursor.close();
+                break;
+            default:
+                throw new UnsupportedOperationException("Unknown loader: " + cursorLoader.getId());
+        }
     }
 
     @Override

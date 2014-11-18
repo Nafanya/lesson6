@@ -33,7 +33,7 @@
 
         <activity
             android:name="ru.ifmo.md.lesson6.rssreader.ChannelActivity"
-            android:label="@string/title_activity_channel" >
+            android:label="@null" >
         </activity>
     </application>
 
