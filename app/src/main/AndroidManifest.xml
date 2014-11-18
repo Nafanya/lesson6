@@ -6,7 +6,7 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@drawable/icon_rss"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
@@ -23,7 +23,7 @@
             android:name="ru.ifmo.md.lesson6.rssreader.RssProvider"
             android:authorities="ru.ifmo.md.lesson6.rssreader"
             android:enabled="true"
-            android:exported="true" >
+            android:exported="false" >
         </provider>
 
         <service
@@ -33,7 +33,11 @@
 
         <activity
             android:name="ru.ifmo.md.lesson6.rssreader.ChannelActivity"
-            android:label="@null" >
+            android:label="@null"
+            android:parentActivityName=".ChannelsActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="ru.ifmo.md.lesson6.rssreader.ChannelsActivity" />
         </activity>
     </application>
 
