@@ -40,11 +40,7 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_channel);
 
-        try {
-            getActionBar().setDisplayHomeAsUpEnabled(true);
-        } catch (NullPointerException e) {
-            //ignore
-        }
+        getActionBar().setDisplayHomeAsUpEnabled(true);
 
         Intent intent = getIntent();
         mChannelId = intent.getLongExtra(EXTRA_CHANNEL_ID, -1);

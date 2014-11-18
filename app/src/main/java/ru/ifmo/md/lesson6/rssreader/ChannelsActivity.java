@@ -238,8 +238,6 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
             case Constants.RESULT_NO_INTERNET:
                 Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
                 break;
-            default:
-                throw new UnsupportedOperationException("Unknown result: " + resultCode);
         }
     }
 }
