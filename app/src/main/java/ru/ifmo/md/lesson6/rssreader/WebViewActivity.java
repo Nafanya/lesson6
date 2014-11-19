@@ -4,7 +4,8 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.webkit.WebSettings;
+import android.view.Window;
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -20,6 +21,9 @@ public class WebViewActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        getWindow().requestFeature(Window.FEATURE_PROGRESS);
+
         setContentView(R.layout.activity_web_view);
         Intent intent = getIntent();
         final String url = intent.getStringExtra(EXTRA_URL);
@@ -28,10 +32,13 @@ public class WebViewActivity extends Activity {
         setTitle(title);
 
         mWebView = (WebView) findViewById(R.id.webView);
-        WebSettings settings = mWebView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
+        mWebView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int progress) {
+                updateProgress(progress);
+            }
+        });
         mWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -40,6 +47,10 @@ public class WebViewActivity extends Activity {
             }
         });
         mWebView.loadUrl(url);
+    }
+
+    private void updateProgress(int newProgress) {
+        setProgress(newProgress * 100);
     }
 
     @Override
