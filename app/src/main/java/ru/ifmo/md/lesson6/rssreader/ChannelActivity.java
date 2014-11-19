@@ -196,16 +196,16 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     public void onReceiveResult(int resultCode, Bundle data) {
         mSwipeRefreshLayout.setRefreshing(false);
         switch (resultCode) {
-            case Constants.RESULT_FAIL:
+            case RssLoaderService.RESULT_FAIL:
                 Toast.makeText(this, "Error while update, try again.", Toast.LENGTH_SHORT).show();
                 break;
-            case Constants.RESULT_OK:
-                int newPosts = data.getInt(Constants.EXTRA_NEW_POSTS, 0);
+            case RssLoaderService.RESULT_OK:
+                int newPosts = data.getInt(RssLoaderService.EXTRA_NEW_POSTS, 0);
                 if (newPosts > 0) {
                     Toast.makeText(this, "You have " + newPosts + " new posts", Toast.LENGTH_SHORT).show();
                 }
                 break;
-            case Constants.RESULT_NO_INTERNET:
+            case RssLoaderService.RESULT_NO_INTERNET:
                 Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
                 break;
         }

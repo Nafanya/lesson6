@@ -38,8 +38,12 @@ public class RssLoaderService extends IntentService {
     private static final String ACTION_LOAD_ALL = "ru.ifmo.md.lesson6.rssreader.action.LOAD_ALL";
 
     private static final String EXTRA_CHANNEL_ID = "ru.ifmo.md.lesson6.rssreader.extra.CHANNEL_ID";
-    private static final int ERROR = -1;
-    private static final int BAD_URL = -2;
+    public static final String EXTRA_NEW_POSTS = "ru.ifmo.md.lesson6.rssreader.extra.new_posts";
+
+    public static final int RESULT_NO_INTERNET = 0;
+    public static final int RESULT_BAD_CHANNEL = 1;
+    public static final int RESULT_OK = 2;
+    public static final int RESULT_FAIL = 3;
 
     private ResultReceiver mReceiver;
 
@@ -78,7 +82,7 @@ public class RssLoaderService extends IntentService {
         if (intent != null) {
             mReceiver = intent.getParcelableExtra(Constants.EXTRA_RECEIVER);
             if (!isOnline()) {
-                mReceiver.send(Constants.RESULT_NO_INTERNET, Bundle.EMPTY);
+                mReceiver.send(RESULT_NO_INTERNET, Bundle.EMPTY);
                 return;
             }
             final String action = intent.getAction();
@@ -107,18 +111,17 @@ public class RssLoaderService extends IntentService {
         }
         final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
         final String chId = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
-        int newPosts = loadChannel(url, chId);
-        switch (newPosts) {
-            case ERROR:
-                mReceiver.send(Constants.RESULT_FAIL, Bundle.EMPTY);
-                break;
-            case BAD_URL:
-                mReceiver.send(Constants.RESULT_BAD_CHANNEL, Bundle.EMPTY);
-                break;
-            default:
-                mReceiver.send(Constants.RESULT_OK, createResultBundle(newPosts));
-                break;
+        int newPosts = 0;
+        try {
+            newPosts = loadChannel(url, chId);
+        } catch (IOException e) {
+            if (e.getClass() == MalformedURLException.class) {
+                mReceiver.send(RESULT_BAD_CHANNEL, Bundle.EMPTY);
+            } else {
+                mReceiver.send(RESULT_FAIL, Bundle.EMPTY);
+            }
         }
+        mReceiver.send(RESULT_OK, createResultBundle(newPosts));
     }
 
     private void handleActionLoadAll() {
@@ -134,19 +137,22 @@ public class RssLoaderService extends IntentService {
         while (!cursor.isAfterLast()) {
             final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
             final String id = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
-            int result = loadChannel(url, id);
+            int result = 0;
+            try {
+                result = loadChannel(url, id);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             if (result > 0) {
                 newPosts += result;
             }
             cursor.moveToNext();
         }
 
-        mReceiver.send(Constants.RESULT_LOAD_FINISHED, createResultBundle(newPosts));
+        mReceiver.send(RESULT_OK, createResultBundle(newPosts));
     }
 
-    //TODO:  mReceiver.send(Constants.RESULT_BAD_CHANNEL, Bundle.EMPTY);
-
-    private int loadChannel(final String tUrl, String channelId) {
+    private int loadChannel(final String tUrl, String channelId) throws IOException {
         URL url;
         int newPosts = 0;
         try {
@@ -154,66 +160,59 @@ public class RssLoaderService extends IntentService {
         } catch (MalformedURLException e) {
             getContentResolver().delete(
                     RssContract.Channels.buildChannelUri(channelId), null, null);
-            return BAD_URL;
+            throw e;
         }
 
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.connect();
+        InputStream is = connection.getInputStream();
+        String encoding = "utf-8";
+        final String contentType = connection.getHeaderField("Content-type");
+        if (contentType != null && contentType.contains("charset=")) {
+            Matcher m = Pattern.compile("charset=([^\\s]+)").matcher(contentType);
+            if (m.find()) {
+                encoding = m.group(1);
+            }
+        }
+        InputStreamReader isr = new InputStreamReader(is, encoding);
+        RssChannel channel = null;
         try {
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.connect();
-            InputStream is = connection.getInputStream();
-            String encoding = "utf-8";
-            final String contentType = connection.getHeaderField("Content-type");
-            if (contentType != null && contentType.contains("charset=")) {
-                Matcher m = Pattern.compile("charset=([^\\s]+)").matcher(contentType);
-                if (m.find()) {
-                    encoding = m.group(1);
-                }
-            }
-            InputStreamReader isr = new InputStreamReader(is, encoding);
-            RssChannel channel = RssParser.parse(isr);
-
-            if (channel == null) {
-                getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
-                return BAD_URL;
-            }
-
-            ContentValues values = new ContentValues();
-            values.put(RssContract.ChannelsColumns.CHANNEL_TITLE, channel.getTitle());
-            values.put(RssContract.ChannelsColumns.CHANNEL_LINK, channel.getUrl());
-
-            getContentResolver().update(
-                    RssContract.Channels.buildChannelUri(channelId), values, null, null);
-
-            for (RssPost post : channel.getPosts()) {
-                Cursor cursor = getContentResolver().query(
-                        RssContract.Posts.buildPostUrlUri(),
-                        RssContract.Posts.URL_COLUMNS,
-                        RssContract.Posts.POST_LINK + " = ?",
-                        new String[]{post.getUrl()},
-                        null
-                );
-                if (cursor.getCount() > 0) {
-                    cursor.close();
-                    continue;
-                }
-
-                values = new ContentValues();
-                values.put(RssContract.Posts.POST_LINK, post.getUrl());
-                values.put(RssContract.Posts.POST_TITLE, post.getTitle());
-                values.put(RssContract.Posts.POST_CHANNEL, channelId);
-
-                newPosts++;
-                Uri uri = getContentResolver().insert(RssContract.Posts.CONTENT_URI, values);
-            }
-            Log.d("TAG", "Add " + newPosts + " posts to channel #" + channel.getTitle());
-        } catch (UnknownHostException e) {
-            if (isOnline()) {
-                getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
-            }
-            return BAD_URL;
-        } catch (IOException e) {
-            e.printStackTrace();
+            channel = RssParser.parse(isr);
+        } catch (SAXException e) {
+            getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
+            throw new MalformedURLException("Invalid RSS url");
         }
+
+        ContentValues values = new ContentValues();
+        values.put(RssContract.ChannelsColumns.CHANNEL_TITLE, channel.getTitle());
+        values.put(RssContract.ChannelsColumns.CHANNEL_LINK, channel.getUrl());
+
+        getContentResolver().update(
+                RssContract.Channels.buildChannelUri(channelId), values, null, null);
+
+        for (RssPost post : channel.getPosts()) {
+            Cursor cursor = getContentResolver().query(
+                    RssContract.Posts.buildPostUrlUri(),
+                    RssContract.Posts.URL_COLUMNS,
+                    RssContract.Posts.POST_LINK + " = ?",
+                    new String[]{post.getUrl()},
+                    null
+            );
+            if (cursor.getCount() > 0) {
+                cursor.close();
+                continue;
+            }
+
+            values = new ContentValues();
+            values.put(RssContract.Posts.POST_LINK, post.getUrl());
+            values.put(RssContract.Posts.POST_TITLE, post.getTitle());
+            values.put(RssContract.Posts.POST_CHANNEL, channelId);
+
+            newPosts++;
+            getContentResolver().insert(RssContract.Posts.CONTENT_URI, values);
+        }
+        Log.d("TAG", "Add " + newPosts + " posts to channel #" + channel.getTitle());
+
         return newPosts;
     }
 
@@ -226,7 +225,7 @@ public class RssLoaderService extends IntentService {
 
     private Bundle createResultBundle(int posts) {
         Bundle bundle = new Bundle();
-        bundle.putInt(Constants.EXTRA_NEW_POSTS, posts);
+        bundle.putInt(EXTRA_NEW_POSTS, posts);
         return bundle;
     }
 
@@ -275,13 +274,6 @@ public class RssLoaderService extends IntentService {
                     if (url != null) {
                         curChannel.setUrl(url.trim());
                     }
-                }
-            });
-
-            channelUrl.setEndTextElementListener(new EndTextElementListener() {
-                @Override
-                public void end(String s) {
-                    //curChannel.setUrl(s.trim());
                 }
             });
 
@@ -366,18 +358,9 @@ public class RssLoaderService extends IntentService {
             });
         }
 
-        public static RssChannel parse(InputStreamReader isr) {
-            try {
-                Xml.parse(isr, root.getContentHandler());
-                return curChannel;
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (SAXException e) {
-                e.printStackTrace();
-            } catch (NullPointerException e) {
-                e.printStackTrace();
-            }
-            return null;
+        public static RssChannel parse(InputStreamReader isr) throws IOException, SAXException {
+            Xml.parse(isr, root.getContentHandler());
+            return curChannel;
         }
     }
 }
