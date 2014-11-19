@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 import android.provider.BaseColumns;
@@ -43,10 +44,23 @@ public class RssLoaderService extends IntentService {
     public static final int RESULT_BAD_CHANNEL = 1;
     public static final int RESULT_OK = 2;
     public static final int RESULT_FAIL = 3;
+    public static final int RESULT_ALREADY_EXISTS = 4;
 
     private ResultReceiver mReceiver;
 
     public static void startActionAddChannel(Context context, String url, RssResultReceiver receiver) {
+        Cursor cursor = context.getContentResolver().query(
+                RssContract.Channels.CONTENT_URI,
+                RssContract.Channels.URL_COLUMNS,
+                RssContract.Channels.CHANNEL_LINK + " = ?",
+                new String[]{url},
+                null
+        );
+        if (cursor.getCount() > 0) {
+            receiver.send(RESULT_ALREADY_EXISTS, Bundle.EMPTY);
+            return;
+        }
+
         ContentValues values = new ContentValues();
         values.put(RssContract.Channels.CHANNEL_TITLE, "Loading");
         values.put(RssContract.Channels.CHANNEL_LINK, url);
@@ -99,7 +113,7 @@ public class RssLoaderService extends IntentService {
         final String channelId = Long.toString(id);
         Cursor cursor = getContentResolver().query(
                 RssContract.Channels.buildChannelUri(channelId),
-                RssContract.Channels.UPDATE_COLUMNS,
+                RssContract.Channels.URL_COLUMNS,
                 BaseColumns._ID + " = ?",
                 new String[]{channelId},
                 null
@@ -126,7 +140,7 @@ public class RssLoaderService extends IntentService {
     private void handleActionLoadAll() {
         Cursor cursor = getContentResolver().query(
                 RssContract.Channels.CONTENT_URI,
-                RssContract.Channels.UPDATE_COLUMNS,
+                RssContract.Channels.URL_COLUMNS,
                 null, null, null
         );
 
@@ -187,12 +201,35 @@ public class RssLoaderService extends IntentService {
         ContentValues values = new ContentValues();
         values.put(RssContract.ChannelsColumns.CHANNEL_TITLE, channel.getTitle());
         values.put(RssContract.ChannelsColumns.CHANNEL_LINK, channel.getUrl());
-
         getContentResolver().update(
                 RssContract.Channels.buildChannelUri(channelId), values, null, null);
 
+        Cursor cursor = getContentResolver().query(
+                RssContract.Channels.CONTENT_URI,
+                RssContract.Channels.URL_COLUMNS,
+                RssContract.Channels.CHANNEL_LINK + " = ?",
+                new String[]{channel.getUrl()},
+                null
+        );
+        /*
+            if insert already existing channel, delete current channel
+         */
+        if (cursor.getCount() >= 2) {
+            getContentResolver().delete(
+                    RssContract.Channels.buildChannelUri(channelId), null, null);
+            mReceiver.send(RESULT_ALREADY_EXISTS, Bundle.EMPTY);
+        }
+        cursor.moveToFirst();
+        while (!cursor.isAfterLast()) {
+            final String curChannelId = Long.toString(cursor.getLong(cursor.getColumnIndex(RssContract.Channels._ID)));
+            if (!curChannelId.equals(channelId)) {
+                channelId = curChannelId;
+                break;
+            }
+        }
+
         for (RssPost post : channel.getPosts()) {
-            Cursor cursor = getContentResolver().query(
+            cursor = getContentResolver().query(
                     RssContract.Posts.buildPostUrlUri(),
                     RssContract.Posts.URL_COLUMNS,
                     RssContract.Posts.POST_LINK + " = ?",

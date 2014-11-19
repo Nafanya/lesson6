@@ -247,6 +247,10 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
             case RssLoaderService.RESULT_NO_INTERNET:
                 Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
                 break;
+            case RssLoaderService.RESULT_ALREADY_EXISTS:
+                mSwipeRefreshLayout.setRefreshing(true);
+                Toast.makeText(this, "Such feed already exists", Toast.LENGTH_SHORT).show();
+                break;
         }
     }
 }

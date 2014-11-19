@@ -41,7 +41,7 @@ public class RssContract {
                 ChannelsColumns.CHANNEL_TITLE,
         };
 
-        public static final String[] UPDATE_COLUMNS = {
+        public static final String[] URL_COLUMNS = {
                 BaseColumns._ID,
                 ChannelsColumns.CHANNEL_LINK,
         };
