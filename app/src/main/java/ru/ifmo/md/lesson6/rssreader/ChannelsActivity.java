@@ -168,7 +168,6 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
     public boolean onContextItemSelected(MenuItem item) {
         AdapterView.AdapterContextMenuInfo acmi =
                 (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-        long id = acmi.id;
         switch (item.getItemId()) {
             case R.id.delete:
                 Cursor cursor = (Cursor) getListAdapter().getItem(acmi.position);

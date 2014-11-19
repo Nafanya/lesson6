@@ -1,5 +1,6 @@
 package ru.ifmo.md.lesson6.rssreader;
 
+import android.app.ActionBar;
 import android.app.ListActivity;
 import android.app.LoaderManager;
 import android.content.Context;
@@ -9,7 +10,6 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.BaseColumns;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.text.Html;
 import android.view.LayoutInflater;
@@ -41,7 +41,10 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_channel);
 
-        getActionBar().setDisplayHomeAsUpEnabled(true);
+        ActionBar bar = getActionBar();
+        if (bar != null) {
+            getActionBar().setDisplayHomeAsUpEnabled(true);
+        }
 
         Intent intent = getIntent();
         mChannelId = intent.getLongExtra(EXTRA_CHANNEL_ID, -1);
@@ -128,9 +131,11 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
     @Override
     protected void onListItemClick(ListView lv, View v, int position, long id) {
         Cursor cursor = (Cursor) mAdapter.getItem(position);
-        String url = cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_LINK));
+        final String url = cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_LINK));
+        final String title = cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_TITLE));
         Intent intent = new Intent(this, WebViewActivity.class);
         intent.putExtra(WebViewActivity.EXTRA_URL, url);
+        intent.putExtra(WebViewActivity.EXTRA_TITLE, title);
         startActivity(intent);
     }
 

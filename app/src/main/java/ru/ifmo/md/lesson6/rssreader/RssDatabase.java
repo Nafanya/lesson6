@@ -1,18 +1,17 @@
 package ru.ifmo.md.lesson6.rssreader;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.os.Build;
 import android.provider.BaseColumns;
 
-import java.sql.DatabaseMetaData;
 import java.util.HashMap;
 import java.util.Map;
 
-import ru.ifmo.md.lesson6.rssreader.RssContract.*;
+import ru.ifmo.md.lesson6.rssreader.RssContract.Channels;
+import ru.ifmo.md.lesson6.rssreader.RssContract.ChannelsColumns;
+import ru.ifmo.md.lesson6.rssreader.RssContract.PostsColumns;
 
 /**
  * Created by Nikita Yaschenko on 16.11.14.

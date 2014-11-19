@@ -12,9 +12,9 @@ import android.os.Bundle;
 import android.os.ResultReceiver;
 import android.provider.BaseColumns;
 import android.sax.Element;
-import android.sax.RootElement;
 import android.sax.ElementListener;
 import android.sax.EndTextElementListener;
+import android.sax.RootElement;
 import android.sax.StartElementListener;
 import android.util.Log;
 import android.util.Xml;
@@ -28,7 +28,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

@@ -1,14 +1,10 @@
 package ru.ifmo.md.lesson6.rssreader;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Handler;
-import android.view.KeyEvent;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -16,40 +12,27 @@ import android.webkit.WebViewClient;
 public class WebViewActivity extends Activity {
 
     public static final String EXTRA_URL = "ru.ifmo.md.lesson6.rssreader.extra.URL";
+    public static final String EXTRA_TITLE = "ru.ifmo.md.lesson6.rssreader.extra.TITLE";
 
     private WebView mWebView;
-    private ProgressDialog mDialog;
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_web_view);
         Intent intent = getIntent();
         final String url = intent.getStringExtra(EXTRA_URL);
+        final String title = intent.getStringExtra(EXTRA_TITLE);
 
-        mDialog = new ProgressDialog(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK);
-        mDialog.setTitle("Loading");
+        setTitle(title);
 
         mWebView = (WebView) findViewById(R.id.webView);
-        mWebView.setWebViewClient(new WebViewClient() {
-            /*
-            @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                mDialog.show();
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        mDialog.dismiss();
-                        finish();
-                    }
-                }, 15000);
-            }
+        WebSettings settings = mWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                mDialog.dismiss();
-            }
-            */
+        mWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 view.loadUrl(url);
@@ -60,12 +43,12 @@ public class WebViewActivity extends Activity {
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK && mWebView != null && mWebView.canGoBack()) {
+    public void onBackPressed() {
+        if (mWebView != null && mWebView.canGoBack()) {
             mWebView.goBack();
-            return true;
+        } else {
+            super.onBackPressed();
         }
-        return super.onKeyDown(keyCode, event);
     }
 
 }
