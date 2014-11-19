@@ -17,6 +17,7 @@ public class RssContract {
         String POST_TITLE = "post_title";
         String POST_LINK = "post_link";
         String POST_CHANNEL = "post_channel";
+        String POST_DESCRIPTION = "post_description";
     }
 
     public static final String CONTENT_AUTHORITY = "ru.ifmo.md.lesson6.rssreader";
@@ -62,7 +63,8 @@ public class RssContract {
         public static final String[] ALL_COLUMNS = {
                 BaseColumns._ID,
                 PostsColumns.POST_LINK,
-                PostsColumns.POST_TITLE
+                PostsColumns.POST_TITLE,
+                PostsColumns.POST_DESCRIPTION,
         };
 
         public static final String[] URL_COLUMNS = {

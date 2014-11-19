@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.BaseColumns;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -83,8 +84,14 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
 
             @Override
             public void bindView(View view, Context context, Cursor cursor) {
-                ((TextView) view.findViewById(android.R.id.text1)).setText(cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_TITLE)));
-                ((TextView) view.findViewById(android.R.id.text2)).setText(cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_LINK)));
+                final String title = cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_TITLE));
+                ((TextView) view.findViewById(android.R.id.text1)).setText(title);
+
+                String desc = cursor.getString(cursor.getColumnIndex(RssContract.Posts.POST_DESCRIPTION));
+                if (desc == null) {
+                    desc = "";
+                }
+                ((TextView) view.findViewById(android.R.id.text2)).setText(Html.fromHtml(desc));
             }
         };
 

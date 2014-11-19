@@ -164,6 +164,8 @@ public class RssLoaderService extends IntentService {
         }
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setConnectTimeout(15000);
+        connection.setReadTimeout(15000);
         connection.connect();
         InputStream is = connection.getInputStream();
         String encoding = "utf-8";
@@ -206,6 +208,7 @@ public class RssLoaderService extends IntentService {
             values = new ContentValues();
             values.put(RssContract.Posts.POST_LINK, post.getUrl());
             values.put(RssContract.Posts.POST_TITLE, post.getTitle());
+            values.put(RssContract.Posts.POST_DESCRIPTION, post.getDescription());
             values.put(RssContract.Posts.POST_CHANNEL, channelId);
 
             newPosts++;

@@ -49,6 +49,7 @@ public class RssDatabase extends SQLiteOpenHelper {
                 + BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + PostsColumns.POST_LINK + " TEXT NOT NULL,"
                 + PostsColumns.POST_TITLE + " TEXT NOT NULL,"
+                + PostsColumns.POST_DESCRIPTION + " TEXT,"
                 + PostsColumns.POST_CHANNEL + " INTEGER NOT NULL,"
                 + "FOREIGN KEY(" + PostsColumns.POST_CHANNEL + ") REFERENCES " +
                         Tables.CHANNELS + "(" + BaseColumns._ID + ") ON DELETE CASCADE);"
