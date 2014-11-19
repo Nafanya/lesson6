@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.Window;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -32,6 +33,11 @@ public class WebViewActivity extends Activity {
         setTitle(title);
 
         mWebView = (WebView) findViewById(R.id.webView);
+        WebSettings settings = mWebView.getSettings();
+        settings.setDisplayZoomControls(false);
+        settings.setBuiltInZoomControls(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
 
         mWebView.setWebChromeClient(new WebChromeClient() {
             @Override

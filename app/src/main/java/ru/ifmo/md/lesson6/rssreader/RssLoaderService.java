@@ -118,10 +118,10 @@ public class RssLoaderService extends IntentService {
                 new String[]{channelId},
                 null
         );
-        cursor.moveToNext();
-        if (cursor.isBeforeFirst() || cursor.isAfterLast()) {
+        if (cursor.getCount() == 0) {
             return;
         }
+        cursor.moveToFirst();
         final String url = cursor.getString(cursor.getColumnIndex(RssContract.Channels.CHANNEL_LINK));
         final String chId = Long.toString(cursor.getLong(cursor.getColumnIndex(BaseColumns._ID)));
         int newPosts = 0;
@@ -226,6 +226,7 @@ public class RssLoaderService extends IntentService {
                 channelId = curChannelId;
                 break;
             }
+            cursor.moveToNext();
         }
 
         for (RssPost post : channel.getPosts()) {
