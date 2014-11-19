@@ -1,9 +1,11 @@
 package ru.ifmo.md.lesson6.rssreader;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Build;
 import android.provider.BaseColumns;
 
 import java.sql.DatabaseMetaData;
@@ -62,6 +64,12 @@ public class RssDatabase extends SQLiteOpenHelper {
                     + ", " + DatabaseUtils.sqlEscapeString(entry.getValue()) + ");"
             );
         }
+    }
+
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        //db.setForeignKeyConstraintsEnabled(true);
+        db.execSQL("PRAGMA foreign_keys=ON;");
     }
 
     @Override

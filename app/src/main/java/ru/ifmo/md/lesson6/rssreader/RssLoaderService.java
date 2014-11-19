@@ -177,7 +177,7 @@ public class RssLoaderService extends IntentService {
             }
         }
         InputStreamReader isr = new InputStreamReader(is, encoding);
-        RssChannel channel = null;
+        RssChannel channel;
         try {
             channel = RssParser.parse(isr);
         } catch (SAXException e) {
@@ -214,7 +214,7 @@ public class RssLoaderService extends IntentService {
             newPosts++;
             getContentResolver().insert(RssContract.Posts.CONTENT_URI, values);
         }
-        Log.d("TAG", "Add " + newPosts + " posts to channel #" + channel.getTitle());
+        Log.d("TAG", "Add " + newPosts + " posts to channel (" + channelId + ") " + channel.getTitle());
 
         return newPosts;
     }

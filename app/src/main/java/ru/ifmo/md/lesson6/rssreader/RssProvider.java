@@ -46,7 +46,6 @@ public class RssProvider extends ContentProvider {
     public int delete(Uri uri, String selection, String[] selectionArgs) {
         final int match = sUriMatcher.match(uri);
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
-        SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
 
         final int rows;
         switch (match) {
@@ -59,6 +58,7 @@ public class RssProvider extends ContentProvider {
             default:
                 throw new UnsupportedOperationException("Unknown Uri: " + uri);
         }
+        Log.d("TAG", "delete " + rows + " rows");
         notifyChange(uri);
         return rows;
     }

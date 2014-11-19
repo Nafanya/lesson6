@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.BaseColumns;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -170,8 +171,11 @@ public class ChannelsActivity extends ListActivity implements LoaderManager.Load
         long id = acmi.id;
         switch (item.getItemId()) {
             case R.id.delete:
+                Cursor cursor = (Cursor) getListAdapter().getItem(acmi.position);
+                final String channelId = cursor.getString(cursor.getColumnIndex(RssContract.Channels._ID));
+                Log.d("TAG", "delete channel #" + channelId);
                 getContentResolver().delete(
-                        RssContract.Channels.buildChannelUri(Long.toString(id)),
+                        RssContract.Channels.buildChannelUri(channelId),
                         null, null);
                 return true;
             default:
