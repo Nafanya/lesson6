@@ -193,7 +193,11 @@ public class RssLoaderService extends IntentService {
         RssChannel channel;
         try {
             channel = RssParser.parse(isr);
+        } catch (IOException e) {
+            throw e;
         } catch (SAXException e) {
+            e.printStackTrace();
+            Log.d("TAG", e.getMessage());
             getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
             throw new MalformedURLException("Invalid RSS url");
         }
