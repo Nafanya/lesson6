@@ -23,6 +23,7 @@ import android.util.Xml;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -193,13 +194,13 @@ public class RssLoaderService extends IntentService {
         RssChannel channel;
         try {
             channel = RssParser.parse(isr);
-        } catch (IOException e) {
-            throw e;
-        } catch (SAXException e) {
+        } catch (SAXException | FileNotFoundException e) {
             e.printStackTrace();
             Log.d("TAG", e.getMessage());
             getContentResolver().delete(RssContract.Channels.buildChannelUri(channelId), null, null);
             throw new MalformedURLException("Invalid RSS url");
+        } catch (IOException e) {
+            throw e;
         }
 
         ContentValues values = new ContentValues();
@@ -403,7 +404,11 @@ public class RssLoaderService extends IntentService {
         }
 
         public static RssChannel parse(InputStreamReader isr) throws IOException, SAXException {
-            Xml.parse(isr, root.getContentHandler());
+            try {
+                Xml.parse(isr, root.getContentHandler());
+            } catch (NullPointerException e) {
+                throw new SAXException("Bad rss");
+            }
             return curChannel;
         }
     }
