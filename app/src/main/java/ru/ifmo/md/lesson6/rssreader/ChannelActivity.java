@@ -172,7 +172,7 @@ public class ChannelActivity extends ListActivity implements LoaderManager.Loade
                         this,
                         RssContract.Posts.buildPostsUri(Long.toString(mChannelId)),
                         RssContract.Posts.ALL_COLUMNS,
-                        null, null, RssContract.Posts._ID + " DESC");
+                        null, null, RssContract.Posts._ID + " ASC");
             case LOADER_CHANNEL_INFO:
                 return new CursorLoader(
                         this,
